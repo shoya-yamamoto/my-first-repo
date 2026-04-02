@@ -2,33 +2,37 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <title>上海 - Mahjong Solitaire</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
-    background: linear-gradient(145deg, #1a3a2a 0%, #0d2818 50%, #1a3a2a 100%);
+    font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic', sans-serif;
+    background: linear-gradient(145deg, #1a4a2a 0%, #0d3018 40%, #0a2510 100%);
     min-height: 100dvh;
     overflow: hidden;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
   }
   #root { min-height: 100dvh; }
   @keyframes shake {
     0%, 100% { transform: translateX(0); }
-    20% { transform: translateX(-3px); }
-    40% { transform: translateX(3px); }
+    20% { transform: translateX(-4px); }
+    40% { transform: translateX(4px); }
     60% { transform: translateX(-2px); }
     80% { transform: translateX(2px); }
   }
   @keyframes fadeUp {
     0% { opacity: 1; transform: translateY(0) scale(1); }
-    100% { opacity: 0; transform: translateY(-30px) scale(1.3); }
+    100% { opacity: 0; transform: translateY(-40px) scale(1.5); }
   }
   @keyframes winGlow {
     0%, 100% { text-shadow: 0 0 10px rgba(255,215,0,0.5); }
-    50% { text-shadow: 0 0 25px rgba(255,215,0,0.9), 0 0 50px rgba(255,165,0,0.5); }
+    50% { text-shadow: 0 0 30px rgba(255,215,0,0.9), 0 0 60px rgba(255,165,0,0.5); }
   }
 </style>
 </head>
@@ -38,313 +42,264 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
 <script type="text/babel">
-const { useState, useCallback, useMemo, useRef } = React;
+const { useState, useCallback, useMemo } = React;
 
-const TILE_TYPES = [
-  { id: 1, label: "一", sub: "萬", color: "#c0392b" },
-  { id: 2, label: "二", sub: "萬", color: "#c0392b" },
-  { id: 3, label: "三", sub: "萬", color: "#c0392b" },
-  { id: 4, label: "四", sub: "萬", color: "#c0392b" },
-  { id: 5, label: "五", sub: "萬", color: "#c0392b" },
-  { id: 6, label: "六", sub: "萬", color: "#c0392b" },
-  { id: 7, label: "七", sub: "萬", color: "#c0392b" },
-  { id: 8, label: "八", sub: "萬", color: "#c0392b" },
-  { id: 9, label: "九", sub: "萬", color: "#c0392b" },
-  { id: 10, label: "一", sub: "筒", color: "#2471a3" },
-  { id: 11, label: "二", sub: "筒", color: "#2471a3" },
-  { id: 12, label: "三", sub: "筒", color: "#2471a3" },
-  { id: 13, label: "四", sub: "筒", color: "#2471a3" },
-  { id: 14, label: "五", sub: "筒", color: "#2471a3" },
-  { id: 15, label: "六", sub: "筒", color: "#2471a3" },
-  { id: 16, label: "七", sub: "筒", color: "#2471a3" },
-  { id: 17, label: "八", sub: "筒", color: "#2471a3" },
-  { id: 18, label: "九", sub: "筒", color: "#2471a3" },
-  { id: 19, label: "東", sub: "", color: "#1a5276" },
-  { id: 20, label: "南", sub: "", color: "#1a5276" },
-  { id: 21, label: "西", sub: "", color: "#1a5276" },
-  { id: 22, label: "北", sub: "", color: "#1a5276" },
-  { id: 23, label: "中", sub: "", color: "#e74c3c" },
-  { id: 24, label: "發", sub: "", color: "#27ae60" },
-  { id: 25, label: "白", sub: "", color: "#7f8c8d" },
-  { id: 26, label: "一", sub: "索", color: "#1e8449" },
-  { id: 27, label: "二", sub: "索", color: "#1e8449" },
-  { id: 28, label: "三", sub: "索", color: "#1e8449" },
-  { id: 29, label: "四", sub: "索", color: "#1e8449" },
-  { id: 30, label: "五", sub: "索", color: "#1e8449" },
-  { id: 31, label: "六", sub: "索", color: "#1e8449" },
-  { id: 32, label: "七", sub: "索", color: "#1e8449" },
-  { id: 33, label: "八", sub: "索", color: "#1e8449" },
-  { id: 34, label: "九", sub: "索", color: "#1e8449" },
-  { id: 35, label: "春", sub: "", color: "#d4ac0d" },
-  { id: 36, label: "夏", sub: "", color: "#d4ac0d" },
-];
+const TILE_COUNT = 36;
+const TW = 34, TH = 44;
 
-const LAYOUT = (() => {
-  const positions = [];
-  const L0 = [
-    [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
-    [0,0,1,1,1,1,1,1,1,1,1,1,0,0],
-    [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
-    [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-    [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-    [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
-    [0,0,1,1,1,1,1,1,1,1,1,1,0,0],
-    [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
-  ];
-  for (let r = 0; r < L0.length; r++)
-    for (let c = 0; c < L0[r].length; c++)
-      if (L0[r][c]) positions.push({ layer: 0, row: r, col: c });
-  for (let r = 0; r < 4; r++)
-    for (let c = 0; c < 8; c++)
-      positions.push({ layer: 1, row: r + 2.5, col: c + 3.5 });
-  for (let r = 0; r < 2; r++)
-    for (let c = 0; c < 6; c++)
-      positions.push({ layer: 2, row: r + 3, col: c + 4 });
-  for (let r = 0; r < 2; r++)
-    for (let c = 0; c < 4; c++)
-      positions.push({ layer: 3, row: r + 3.5, col: c + 5.5 });
-  positions.push({ layer: 4, row: 4, col: 6 });
-  positions.push({ layer: 4, row: 4, col: 7 });
-  positions.push({ layer: 5, row: 4.5, col: 7 });
-  return positions;
-})();
+function PinCircle({ cx, cy, r }) {
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={r} fill="#1a6b3c" />
+      <circle cx={cx} cy={cy} r={r*0.6} fill="#c0392b" />
+      <circle cx={cx} cy={cy} r={r*0.25} fill="#1a6b3c" />
+    </g>
+  );
+}
 
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
+function Bamboo({ x, y, h, color="#1a6b3c" }) {
+  const w = 3, segH = h / 3;
+  return (
+    <g>
+      <rect x={x-w/2} y={y} width={w} height={h} rx={1} fill={color} />
+      <line x1={x-w/2-0.5} y1={y+segH} x2={x+w/2+0.5} y2={y+segH} stroke="#0d4a22" strokeWidth={0.8} />
+      <line x1={x-w/2-0.5} y1={y+segH*2} x2={x+w/2+0.5} y2={y+segH*2} stroke="#0d4a22" strokeWidth={0.8} />
+    </g>
+  );
+}
+
+function SouBird({ cx, cy, size }) {
+  const s = size;
+  return (
+    <g transform={`translate(${cx},${cy})`}>
+      <ellipse cx={0} cy={s*0.05} rx={s*0.28} ry={s*0.35} fill="#1a6b3c" />
+      <circle cx={0} cy={-s*0.32} r={s*0.16} fill="#c0392b" />
+      <circle cx={s*0.04} cy={-s*0.34} r={s*0.03} fill="#fff" />
+      <circle cx={s*0.05} cy={-s*0.34} r={s*0.015} fill="#000" />
+      <polygon points={`${s*0.14},${-s*0.3} ${s*0.24},${-s*0.28} ${s*0.14},${-s*0.26}`} fill="#d4a017" />
+      <path d={`M${-s*0.08},${s*0.3} Q${-s*0.2},${s*0.5} ${-s*0.15},${s*0.45}`} stroke="#1a6b3c" strokeWidth={1.5} fill="none" />
+      <path d={`M0,${s*0.35} Q0,${s*0.55} ${s*0.05},${s*0.48}`} stroke="#1a6b3c" strokeWidth={1.5} fill="none" />
+      <path d={`M${s*0.08},${s*0.3} Q${s*0.2},${s*0.5} ${s*0.2},${s*0.42}`} stroke="#1a6b3c" strokeWidth={1.5} fill="none" />
+    </g>
+  );
+}
+
+function TileFaceSVG({ typeId }) {
+  const w=TW, h=TH, cx=w/2, cy=h/2;
+  const serif = "'Hiragino Mincho ProN','Yu Mincho',serif";
+
+  // 萬子 (1-9)
+  if (typeId>=1 && typeId<=9) {
+    const num=typeId;
+    const kn=["一","二","三","四","五","六","七","八","九"];
+    const isRed=[1,5,7,9].includes(num);
+    return (<g>
+      <text x={cx} y={h*0.38} textAnchor="middle" dominantBaseline="central"
+        fontSize={num<=3?16:15} fontWeight="900" fill={isRed?"#c0392b":"#1a1a1a"} fontFamily={serif}>{kn[num-1]}</text>
+      <text x={cx} y={h*0.72} textAnchor="middle" dominantBaseline="central"
+        fontSize={10} fontWeight="700" fill="#c0392b" fontFamily={serif}>萬</text>
+    </g>);
   }
-  return a;
-}
 
-function generateTiles(layout) {
-  const total = layout.length;
-  const pairCount = Math.floor(total / 2);
-  const types = [];
-  for (let i = 0; i < pairCount; i++) {
-    const typeId = (i % TILE_TYPES.length) + 1;
-    types.push(typeId, typeId);
+  // 筒子 (10-18)
+  if (typeId>=10 && typeId<=18) {
+    const num=typeId-9;
+    const pos={
+      1:[[cx,cy]],
+      2:[[cx,cy-7],[cx,cy+7]],
+      3:[[cx,cy-9],[cx,cy],[cx,cy+9]],
+      4:[[cx-6,cy-6],[cx+6,cy-6],[cx-6,cy+6],[cx+6,cy+6]],
+      5:[[cx-6,cy-6],[cx+6,cy-6],[cx,cy],[cx-6,cy+6],[cx+6,cy+6]],
+      6:[[cx-6,cy-9],[cx+6,cy-9],[cx-6,cy],[cx+6,cy],[cx-6,cy+9],[cx+6,cy+9]],
+      7:[[cx-6,cy-10],[cx+6,cy-10],[cx-6,cy],[cx,cy],[cx+6,cy],[cx-6,cy+10],[cx+6,cy+10]],
+      8:[[cx-6,cy-11],[cx,cy-11],[cx+6,cy-11],[cx-6,cy],[cx+6,cy],[cx-6,cy+11],[cx,cy+11],[cx+6,cy+11]],
+      9:[[cx-7,cy-10],[cx,cy-10],[cx+7,cy-10],[cx-7,cy],[cx,cy],[cx+7,cy],[cx-7,cy+10],[cx,cy+10],[cx+7,cy+10]],
+    };
+    const rr=num>=7?3.5:num>=4?3.8:4.2;
+    return <g>{(pos[num]||[]).map(([px,py],i)=><PinCircle key={i} cx={px} cy={py} r={rr} />)}</g>;
   }
-  while (types.length < total) types.push(1, 1);
-  const shuffled = shuffle(types.slice(0, total));
-  return layout.map((pos, idx) => ({ id: idx, typeId: shuffled[idx], ...pos, removed: false }));
-}
 
-function isCovered(tile, tiles) {
-  return tiles.some(t => !t.removed && t.layer === tile.layer + 1 && Math.abs(t.row - tile.row) < 1 && Math.abs(t.col - tile.col) < 1);
-}
+  // 索子 (19-27)
+  if (typeId>=19 && typeId<=27) {
+    const num=typeId-18;
+    if (num===1) return <SouBird cx={cx} cy={cy} size={20} />;
+    const bh=num<=4?14:num<=6?12:10;
+    const layouts={
+      2:[[cx-4,cy-bh/2],[cx+4,cy-bh/2]],
+      3:[[cx-5,cy-bh/2],[cx,cy-bh/2],[cx+5,cy-bh/2]],
+      4:[[cx-5,cy-bh-1],[cx+5,cy-bh-1],[cx-5,cy+1],[cx+5,cy+1]],
+      5:[[cx-5,cy-bh-1],[cx+5,cy-bh-1],[cx,cy-bh/2],[cx-5,cy+1],[cx+5,cy+1]],
+      6:[[cx-5,cy-bh-2],[cx,cy-bh-2],[cx+5,cy-bh-2],[cx-5,cy+2],[cx,cy+2],[cx+5,cy+2]],
+      7:[[cx-5,cy-bh-3],[cx,cy-bh-3],[cx+5,cy-bh-3],[cx,cy-1],[cx-5,cy+bh-3],[cx,cy+bh-3],[cx+5,cy+bh-3]],
+      8:[[cx-6,cy-bh-3],[cx-2,cy-bh-3],[cx+2,cy-bh-3],[cx+6,cy-bh-3],[cx-6,cy+3],[cx-2,cy+3],[cx+2,cy+3],[cx+6,cy+3]],
+      9:[[cx-6,cy-bh-3],[cx-2,cy-bh-3],[cx+2,cy-bh-3],[cx+6,cy-bh-3],[cx,cy-1],[cx-6,cy+bh-5],[cx-2,cy+bh-5],[cx+2,cy+bh-5],[cx+6,cy+bh-5]],
+    };
+    const c1=num%2===0?"#1a6b3c":"#c0392b";
+    const c2=num%2===0?"#c0392b":"#1a6b3c";
+    return <g>{(layouts[num]||[]).map(([bx,by],i)=><Bamboo key={i} x={bx} y={by} h={bh} color={i%2===0?c1:c2} />)}</g>;
+  }
 
-function isSideBlocked(tile, tiles) {
-  const same = tiles.filter(t => !t.removed && t.layer === tile.layer && t.id !== tile.id);
-  const l = same.some(t => Math.abs(t.col - (tile.col - 1)) < 0.01 && Math.abs(t.row - tile.row) < 0.8);
-  const r = same.some(t => Math.abs(t.col - (tile.col + 1)) < 0.01 && Math.abs(t.row - tile.row) < 0.8);
-  return l && r;
-}
-
-function isFree(tile, tiles) {
-  if (tile.removed) return false;
-  return !isCovered(tile, tiles) && !isSideBlocked(tile, tiles);
-}
-
-function findHint(tiles) {
-  const free = tiles.filter(t => isFree(t, tiles));
-  for (let i = 0; i < free.length; i++)
-    for (let j = i + 1; j < free.length; j++)
-      if (free[i].typeId === free[j].typeId) return [free[i].id, free[j].id];
+  // 風牌 (28-31)
+  if (typeId>=28 && typeId<=31) {
+    const winds=["東","南","西","北"];
+    return <text x={cx} y={cy+1} textAnchor="middle" dominantBaseline="central"
+      fontSize={22} fontWeight="900" fill="#1a3a6b" fontFamily={serif} stroke="#1a3a6b" strokeWidth={0.3}>{winds[typeId-28]}</text>;
+  }
+  // 中
+  if (typeId===32) return <text x={cx} y={cy+1} textAnchor="middle" dominantBaseline="central"
+    fontSize={24} fontWeight="900" fill="#c0392b" fontFamily={serif} stroke="#a02020" strokeWidth={0.5}>中</text>;
+  // 發
+  if (typeId===33) return <text x={cx} y={cy+1} textAnchor="middle" dominantBaseline="central"
+    fontSize={22} fontWeight="900" fill="#1a6b3c" fontFamily={serif} stroke="#0d4a22" strokeWidth={0.4}>發</text>;
+  // 白
+  if (typeId===34) return <rect x={6} y={6} width={w-12} height={h-12} fill="none" stroke="#5a7a8a" strokeWidth={1.8} rx={2} />;
+  // 花牌
+  if (typeId===35||typeId===36) {
+    const l=typeId===35?"春":"夏";
+    const c=typeId===35?"#d4a017":"#c0392b";
+    return <text x={cx} y={cy+1} textAnchor="middle" dominantBaseline="central"
+      fontSize={20} fontWeight="800" fill={c} fontFamily={serif}>{l}</text>;
+  }
   return null;
 }
 
-function hasMovesLeft(tiles) { return findHint(tiles) !== null; }
-
-function ShanghaiGame() {
-  const [tiles, setTiles] = useState(() => generateTiles(LAYOUT));
-  const [selected, setSelected] = useState(null);
-  const [hint, setHint] = useState(null);
-  const [removingIds, setRemovingIds] = useState(new Set());
-  const [shakeId, setShakeId] = useState(null);
-  const [score, setScore] = useState(0);
-  const [gameState, setGameState] = useState("playing");
-  const [combo, setCombo] = useState(0);
-  const [showCombo, setShowCombo] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-
-  const remaining = tiles.filter(t => !t.removed).length;
-  const TILE_W = 22, TILE_H = 28, GAP = 1.5, LX = 2, LY = 2;
-
-  const boardInfo = useMemo(() => {
-    const maxCol = Math.max(...LAYOUT.map(p => p.col));
-    const maxRow = Math.max(...LAYOUT.map(p => p.row));
-    const maxLayer = Math.max(...LAYOUT.map(p => p.layer));
-    return {
-      w: (maxCol + 1) * (TILE_W + GAP) + maxLayer * LX + TILE_W * 0.5 + 10,
-      h: (maxRow + 1) * (TILE_H + GAP) + maxLayer * LY + TILE_H * 0.5 + 10
-    };
-  }, []);
-
-  const newGame = useCallback(() => {
-    setTiles(generateTiles(LAYOUT)); setSelected(null); setHint(null);
-    setRemovingIds(new Set()); setScore(0); setGameState("playing");
-    setCombo(0); setShowModal(false);
-  }, []);
-
-  const reshuffleTiles = useCallback(() => {
-    setTiles(prev => {
-      const rem = prev.filter(t => !t.removed);
-      const removed = prev.filter(t => t.removed);
-      const typeIds = shuffle(rem.map(t => t.typeId));
-      return [...rem.map((t, i) => ({ ...t, typeId: typeIds[i] })), ...removed];
-    });
-    setSelected(null); setHint(null); setCombo(0);
-  }, []);
-
-  const showHintHandler = useCallback(() => {
-    const h = findHint(tiles);
-    setHint(h);
-    if (h) setTimeout(() => setHint(null), 2000);
-  }, [tiles]);
-
-  const handleTileClick = useCallback((tile) => {
-    if (gameState !== "playing" || tile.removed || removingIds.has(tile.id)) return;
-    if (!isFree(tile, tiles)) {
-      setShakeId(tile.id);
-      setTimeout(() => setShakeId(null), 400);
-      return;
-    }
-    if (selected === null) { setSelected(tile.id); setHint(null); }
-    else if (selected === tile.id) { setSelected(null); }
-    else {
-      const sel = tiles.find(t => t.id === selected);
-      if (sel && sel.typeId === tile.typeId) {
-        const ids = new Set([selected, tile.id]);
-        setRemovingIds(ids); setSelected(null);
-        const nc = combo + 1; setCombo(nc);
-        if (nc >= 2) { setShowCombo(true); setTimeout(() => setShowCombo(false), 800); }
-        setScore(s => s + 10 * nc);
-        setTimeout(() => {
-          setTiles(prev => {
-            const next = prev.map(t => ids.has(t.id) ? { ...t, removed: true } : t);
-            const rem = next.filter(n => !n.removed);
-            if (rem.length === 0) { setGameState("won"); setShowModal(true); }
-            else if (!hasMovesLeft(next)) { setGameState("stuck"); setShowModal(true); }
-            return next;
-          });
-          setRemovingIds(new Set());
-        }, 300);
-      } else { setSelected(tile.id); setCombo(0); }
-    }
-  }, [selected, tiles, gameState, removingIds, combo]);
-
-  const getTileStyle = (tile) => {
-    const free = isFree(tile, tiles);
-    const isSel = selected === tile.id;
-    const isHint = hint && hint.includes(tile.id);
-    const isRem = removingIds.has(tile.id);
-    const isShake = shakeId === tile.id;
-    const x = tile.col * (TILE_W + GAP) + tile.layer * LX;
-    const y = tile.row * (TILE_H + GAP) + tile.layer * LY;
-    const bg = isSel ? "linear-gradient(180deg,#fff8dc,#f0e68c)" :
-               isHint ? "linear-gradient(180deg,#e8f8e0,#b8e6a0)" :
-               free ? "linear-gradient(180deg,#fefefe,#e8e0d0)" :
-               "linear-gradient(180deg,#d8d0c0,#c0b8a8)";
-    const border = isSel ? "#d4af37" : isHint ? "#66bb6a" : "#b0a890";
-    const shadow = isSel ? "0 0 6px rgba(212,175,55,0.6),1px 2px 2px rgba(0,0,0,0.3)" :
-                   isHint ? "0 0 6px rgba(102,187,106,0.5),1px 2px 2px rgba(0,0,0,0.3)" :
-                   "1px 2px 2px rgba(0,0,0,0.3)";
-    return {
-      position:"absolute", left:x, top:y, width:TILE_W, height:TILE_H,
-      zIndex: tile.layer*100+Math.round(tile.row*10),
-      background:bg, border:`1.5px solid ${border}`, borderRadius:3, boxShadow:shadow,
-      display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
-      cursor: free?"pointer":"default",
-      transition: isRem?"transform 0.3s ease-out,opacity 0.3s":"box-shadow 0.15s",
-      transform: isRem?"scale(0.5) translateY(-10px)":"none",
-      opacity: isRem?0:1, userSelect:"none",
-      WebkitTapHighlightColor:"transparent",
-      animation: isShake?"shake 0.4s ease":undefined,
-      touchAction:"manipulation"
-    };
-  };
-
-  const tileType = id => TILE_TYPES[(id - 1) % TILE_TYPES.length];
-  const btn = {
-    padding:"6px 10px", border:"1px solid #5a8a6a", borderRadius:6,
-    background:"rgba(90,138,106,0.15)", color:"#8fbc8f",
-    fontSize:11, fontWeight:600, cursor:"pointer",
-    fontFamily:"inherit", touchAction:"manipulation"
-  };
+function MahjongTile({ tile, isSelected, isHint, isRemoving, isShaking, isFreeT, onClick }) {
+  const D=3;
+  const faceTop=isSelected?"#fff8dc":"#faf5eb";
+  const faceBot=isSelected?"#f0e68c":"#ede4d0";
+  const borderColor=isSelected?"#d4af37":isHint?"#66bb6a":"#c8bfa8";
+  const glow=isSelected?"drop-shadow(0 0 4px rgba(212,175,55,0.7))"
+    :isHint?"drop-shadow(0 0 4px rgba(102,187,106,0.6))"
+    :"drop-shadow(1px 2px 2px rgba(0,0,0,0.4))";
 
   return (
+    <svg width={TW+D} height={TH+D} viewBox={`0 0 ${TW+D} ${TH+D}`}
+      style={{
+        cursor:isFreeT?"pointer":"default",
+        opacity:isRemoving?0:isFreeT?1:0.75,
+        transition:isRemoving?"transform 0.3s,opacity 0.3s":"filter 0.15s",
+        transform:isRemoving?"scale(0.5) translateY(-10px)":"none",
+        animation:isShaking?"shake 0.4s ease":undefined,
+        filter:glow, touchAction:"manipulation",
+      }}
+      onClick={onClick}
+    >
+      <path d={`M${D},${TH} L${TW+D},${TH} L${TW+D},${TH+D} L${D},${TH+D} Z`} fill="#6b8a5a" />
+      <path d={`M${TW},0 L${TW+D},${D} L${TW+D},${TH+D} L${TW},${TH} Z`} fill="#8ba67a" />
+      <defs>
+        <linearGradient id={`f${tile.id}`} x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor={faceTop} />
+          <stop offset="100%" stopColor={faceBot} />
+        </linearGradient>
+      </defs>
+      <rect x={0} y={0} width={TW} height={TH} rx={2.5} fill={`url(#f${tile.id})`}
+        stroke={borderColor} strokeWidth={1} />
+      <rect x={2} y={2} width={TW-4} height={TH-4} rx={1.5} fill="none" stroke="rgba(0,0,0,0.04)" strokeWidth={0.5} />
+      <TileFaceSVG typeId={tile.typeId} />
+    </svg>
+  );
+}
+
+const LAYOUT=(()=>{
+  const p=[];
+  const L0=[[0,0,0,1,1,1,1,1,1,1,1,0,0,0],[0,0,1,1,1,1,1,1,1,1,1,1,0,0],[0,1,1,1,1,1,1,1,1,1,1,1,1,0],[1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1],[0,1,1,1,1,1,1,1,1,1,1,1,1,0],[0,0,1,1,1,1,1,1,1,1,1,1,0,0],[0,0,0,1,1,1,1,1,1,1,1,0,0,0]];
+  for(let r=0;r<L0.length;r++)for(let c=0;c<L0[r].length;c++)if(L0[r][c])p.push({layer:0,row:r,col:c});
+  for(let r=0;r<4;r++)for(let c=0;c<8;c++)p.push({layer:1,row:r+2.5,col:c+3.5});
+  for(let r=0;r<2;r++)for(let c=0;c<6;c++)p.push({layer:2,row:r+3,col:c+4});
+  for(let r=0;r<2;r++)for(let c=0;c<4;c++)p.push({layer:3,row:r+3.5,col:c+5.5});
+  p.push({layer:4,row:4,col:6},{layer:4,row:4,col:7});
+  p.push({layer:5,row:4.5,col:7});
+  return p;
+})();
+
+function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
+function generateTiles(layout){const t=layout.length,pc=Math.floor(t/2),types=[];for(let i=0;i<pc;i++){types.push((i%TILE_COUNT)+1,(i%TILE_COUNT)+1);}while(types.length<t)types.push(1,1);const s=shuffle(types.slice(0,t));return layout.map((p,i)=>({id:i,typeId:s[i],...p,removed:false}));}
+function isCovered(t,ts){return ts.some(o=>!o.removed&&o.layer===t.layer+1&&Math.abs(o.row-t.row)<1&&Math.abs(o.col-t.col)<1);}
+function isSideBlocked(t,ts){const s=ts.filter(o=>!o.removed&&o.layer===t.layer&&o.id!==t.id);return s.some(o=>Math.abs(o.col-(t.col-1))<0.01&&Math.abs(o.row-t.row)<0.8)&&s.some(o=>Math.abs(o.col-(t.col+1))<0.01&&Math.abs(o.row-t.row)<0.8);}
+function isFree(t,ts){return !t.removed&&!isCovered(t,ts)&&!isSideBlocked(t,ts);}
+function findHint(ts){const f=ts.filter(t=>isFree(t,ts));for(let i=0;i<f.length;i++)for(let j=i+1;j<f.length;j++)if(f[i].typeId===f[j].typeId)return[f[i].id,f[j].id];return null;}
+function hasMovesLeft(ts){return findHint(ts)!==null;}
+
+function ShanghaiGame(){
+  const[tiles,setTiles]=useState(()=>generateTiles(LAYOUT));
+  const[selected,setSelected]=useState(null);
+  const[hint,setHint]=useState(null);
+  const[removingIds,setRemovingIds]=useState(new Set());
+  const[shakeId,setShakeId]=useState(null);
+  const[score,setScore]=useState(0);
+  const[gameState,setGameState]=useState("playing");
+  const[combo,setCombo]=useState(0);
+  const[showCombo,setShowCombo]=useState(false);
+  const[showModal,setShowModal]=useState(false);
+  const remaining=tiles.filter(t=>!t.removed).length;
+  const CW=TW+4,CH=TH+4,LX=3,LY=3;
+  const boardInfo=useMemo(()=>{
+    const mc=Math.max(...LAYOUT.map(p=>p.col)),mr=Math.max(...LAYOUT.map(p=>p.row)),ml=Math.max(...LAYOUT.map(p=>p.layer));
+    return{w:(mc+1)*CW+ml*LX+TW+20,h:(mr+1)*CH+ml*LY+TH+20};
+  },[]);
+
+  const newGame=useCallback(()=>{setTiles(generateTiles(LAYOUT));setSelected(null);setHint(null);setRemovingIds(new Set());setScore(0);setGameState("playing");setCombo(0);setShowModal(false);},[]);
+  const reshuffleTiles=useCallback(()=>{setTiles(p=>{const r=p.filter(t=>!t.removed),d=p.filter(t=>t.removed),ids=shuffle(r.map(t=>t.typeId));return[...r.map((t,i)=>({...t,typeId:ids[i]})),...d];});setSelected(null);setHint(null);setCombo(0);},[]);
+  const showHintHandler=useCallback(()=>{const h=findHint(tiles);setHint(h);if(h)setTimeout(()=>setHint(null),2500);},[tiles]);
+
+  const handleTileClick=useCallback((tile)=>{
+    if(gameState!=="playing"||tile.removed||removingIds.has(tile.id))return;
+    if(!isFree(tile,tiles)){setShakeId(tile.id);setTimeout(()=>setShakeId(null),400);return;}
+    if(selected===null){setSelected(tile.id);setHint(null);}
+    else if(selected===tile.id){setSelected(null);}
+    else{
+      const sel=tiles.find(t=>t.id===selected);
+      if(sel&&sel.typeId===tile.typeId){
+        const ids=new Set([selected,tile.id]);setRemovingIds(ids);setSelected(null);
+        const nc=combo+1;setCombo(nc);
+        if(nc>=2){setShowCombo(true);setTimeout(()=>setShowCombo(false),900);}
+        setScore(s=>s+10*nc);
+        setTimeout(()=>{setTiles(p=>{const n=p.map(t=>ids.has(t.id)?{...t,removed:true}:t);const r=n.filter(x=>!x.removed);if(r.length===0){setGameState("won");setShowModal(true);}else if(!hasMovesLeft(n)){setGameState("stuck");setShowModal(true);}return n;});setRemovingIds(new Set());},300);
+      }else{setSelected(tile.id);setCombo(0);}
+    }
+  },[selected,tiles,gameState,removingIds,combo]);
+
+  const btn={padding:"8px 14px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",touchAction:"manipulation",letterSpacing:1,border:"1px solid rgba(250,245,235,0.2)",background:"rgba(250,245,235,0.08)",color:"#d4c9a8"};
+
+  return(
     <div style={{minHeight:"100dvh",display:"flex",flexDirection:"column",alignItems:"center",position:"relative"}}>
-      {/* Header */}
-      <div style={{width:"100%",padding:"12px 16px 8px",display:"flex",alignItems:"center",justifyContent:"space-between",maxWidth:420}}>
-        <div style={{display:"flex",flexDirection:"column",gap:2}}>
-          <div style={{fontSize:20,fontWeight:800,color:"#d4af37",letterSpacing:4,textShadow:"0 1px 3px rgba(0,0,0,0.5)"}}>上海</div>
-          <div style={{fontSize:9,color:"#8fbc8f",letterSpacing:1}}>MAHJONG SOLITAIRE</div>
+      <div style={{width:"100%",maxWidth:480,padding:"10px 16px 6px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div>
+          <div style={{fontSize:22,fontWeight:900,color:"#d4af37",letterSpacing:6,textShadow:"0 2px 4px rgba(0,0,0,0.5)",fontFamily:"'Hiragino Mincho ProN','Yu Mincho',serif"}}>上海</div>
+          <div style={{fontSize:8,color:"#8fbc8f",letterSpacing:2,marginTop:1}}>MAHJONG SOLITAIRE</div>
         </div>
-        <div style={{display:"flex",gap:12,alignItems:"center"}}>
-          <div style={{textAlign:"center"}}>
-            <div style={{fontSize:16,fontWeight:700,color:"#d4af37"}}>{score}</div>
-            <div style={{fontSize:8,color:"#8fbc8f"}}>SCORE</div>
-          </div>
-          <div style={{textAlign:"center"}}>
-            <div style={{fontSize:16,fontWeight:700,color:"#e8e0d0"}}>{remaining}</div>
-            <div style={{fontSize:8,color:"#8fbc8f"}}>残り</div>
-          </div>
+        <div style={{display:"flex",gap:16,alignItems:"center"}}>
+          <div style={{textAlign:"center"}}><div style={{fontSize:18,fontWeight:800,color:"#d4af37",fontFamily:"monospace"}}>{score}</div><div style={{fontSize:7,color:"#8fbc8f",letterSpacing:1}}>SCORE</div></div>
+          <div style={{textAlign:"center"}}><div style={{fontSize:18,fontWeight:800,color:"#e8e0d0",fontFamily:"monospace"}}>{remaining}</div><div style={{fontSize:7,color:"#8fbc8f",letterSpacing:1}}>残り</div></div>
         </div>
       </div>
-
-      {/* Board */}
-      <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",width:"100%",overflow:"auto",padding:8}}>
+      <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",width:"100%",overflow:"auto",padding:4,WebkitOverflowScrolling:"touch"}}>
         <div style={{position:"relative",width:boardInfo.w,height:boardInfo.h,flexShrink:0}}>
-          {tiles.filter(t => !t.removed || removingIds.has(t.id)).sort((a,b) => a.layer-b.layer||a.row-b.row).map(tile => {
-            const type = tileType(tile.typeId);
-            return (
-              <div key={tile.id} style={getTileStyle(tile)} onClick={() => handleTileClick(tile)}>
-                <span style={{fontSize:type.sub?10:13,fontWeight:800,color:type.color,lineHeight:1}}>{type.label}</span>
-                {type.sub && <span style={{fontSize:6,color:type.color,lineHeight:1,marginTop:1}}>{type.sub}</span>}
-              </div>
-            );
+          {tiles.filter(t=>!t.removed||removingIds.has(t.id)).sort((a,b)=>a.layer-b.layer||a.row-b.row).map(tile=>{
+            const x=tile.col*CW+tile.layer*LX,y=tile.row*CH+tile.layer*LY,free=isFree(tile,tiles);
+            return(<div key={tile.id} style={{position:"absolute",left:x,top:y,zIndex:tile.layer*100+Math.round(tile.row*10)}}>
+              <MahjongTile tile={tile} isSelected={selected===tile.id} isHint={hint&&hint.includes(tile.id)}
+                isRemoving={removingIds.has(tile.id)} isShaking={shakeId===tile.id} isFreeT={free}
+                onClick={()=>handleTileClick(tile)} />
+            </div>);
           })}
         </div>
       </div>
-
-      {/* Combo */}
-      {showCombo && (
-        <div style={{position:"absolute",top:"40%",left:"50%",transform:"translate(-50%,-50%)",fontSize:28,fontWeight:900,color:"#d4af37",textShadow:"0 0 20px rgba(212,175,55,0.8)",pointerEvents:"none",animation:"fadeUp 0.8s ease-out forwards",zIndex:1000}}>
-          {combo}x COMBO!
-        </div>
-      )}
-
-      {/* Controls */}
-      <div style={{width:"100%",maxWidth:420,padding:"8px 16px 16px",display:"flex",gap:8,justifyContent:"center"}}>
+      {showCombo&&<div style={{position:"absolute",top:"38%",left:"50%",transform:"translate(-50%,-50%)",fontSize:32,fontWeight:900,color:"#d4af37",textShadow:"0 0 20px rgba(212,175,55,0.8),0 0 40px rgba(255,165,0,0.4)",pointerEvents:"none",animation:"fadeUp 0.9s ease-out forwards",zIndex:1000,fontFamily:"monospace"}}>{combo}x COMBO!</div>}
+      <div style={{width:"100%",maxWidth:480,padding:"6px 16px 14px",display:"flex",gap:8,justifyContent:"center"}}>
         <button onClick={showHintHandler} style={btn}>ヒント</button>
         <button onClick={reshuffleTiles} style={btn}>配り直し</button>
         <button onClick={newGame} style={btn}>新規</button>
       </div>
-
-      {/* Modal */}
-      {showModal && (
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000}}>
-          <div style={{background:"linear-gradient(180deg,#1a3a2a,#0d2818)",border:"2px solid #d4af37",borderRadius:16,padding:"28px 24px 20px",textAlign:"center",maxWidth:300,width:"85%"}}>
-            <div style={{fontSize:24,fontWeight:900,color:"#d4af37",marginBottom:8,animation:gameState==="won"?"winGlow 1.5s ease infinite":undefined}}>
-              {gameState==="won"?"クリア！":"詰み…"}
-            </div>
-            <div style={{fontSize:14,color:"#e8e0d0",marginBottom:4}}>スコア: {score}</div>
-            <div style={{fontSize:12,color:"#8fbc8f",marginBottom:20}}>
-              {gameState==="won"?"おめでとうございます！":"動かせる牌がありません"}
-            </div>
-            <div style={{display:"flex",gap:8}}>
-              {gameState==="stuck" && (
-                <button onClick={() => { reshuffleTiles(); setGameState("playing"); setShowModal(false); }}
-                  style={{flex:1,padding:10,border:"1px solid #5a8a6a",borderRadius:8,background:"rgba(90,138,106,0.2)",color:"#8fbc8f",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                  配り直し
-                </button>
-              )}
-              <button onClick={newGame}
-                style={{flex:1,padding:10,border:"1px solid #d4af37",borderRadius:8,background:"linear-gradient(180deg,#d4af37,#b8942e)",color:"#1a3a2a",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                新しいゲーム
-              </button>
+      {showModal&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,backdropFilter:"blur(4px)",WebkitBackdropFilter:"blur(4px)"}}>
+          <div style={{background:"linear-gradient(180deg,#1a4a2a,#0d2818)",border:"2px solid #d4af37",borderRadius:16,padding:"32px 28px 24px",textAlign:"center",maxWidth:320,width:"88%",boxShadow:"0 20px 60px rgba(0,0,0,0.5)"}}>
+            <div style={{fontSize:28,fontWeight:900,color:"#d4af37",marginBottom:8,animation:gameState==="won"?"winGlow 1.5s ease infinite":undefined,fontFamily:"'Hiragino Mincho ProN','Yu Mincho',serif"}}>{gameState==="won"?"クリア！":"詰み…"}</div>
+            <div style={{fontSize:16,color:"#e8e0d0",marginBottom:4,fontFamily:"monospace"}}>SCORE: {score}</div>
+            <div style={{fontSize:13,color:"#8fbc8f",marginBottom:24}}>{gameState==="won"?"おめでとうございます！":"動かせる牌がありません"}</div>
+            <div style={{display:"flex",gap:10}}>
+              {gameState==="stuck"&&<button onClick={()=>{reshuffleTiles();setGameState("playing");setShowModal(false);}} style={{...btn,flex:1,padding:12,fontSize:14}}>配り直し</button>}
+              <button onClick={newGame} style={{...btn,flex:1,padding:12,fontSize:14,border:"1px solid #d4af37",background:"linear-gradient(180deg,#d4af37,#b8942e)",color:"#1a3a2a"}}>新しいゲーム</button>
             </div>
           </div>
         </div>
