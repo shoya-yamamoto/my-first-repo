@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="52" height="66" viewBox="0 0 52 66">
+  <defs>
+    <linearGradient id="face" x1="0" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#fffef7"/>
+      <stop offset="0.58" stop-color="#f8f4e8"/>
+      <stop offset="1" stop-color="#e7dfc9"/>
+    </linearGradient>
+    <linearGradient id="right" x1="0" y1="0" x2="1" y2="0.2">
+      <stop offset="0" stop-color="#8fb49a"/>
+      <stop offset="0.3" stop-color="#648d71"/>
+      <stop offset="1" stop-color="#315d47"/>
+    </linearGradient>
+    <linearGradient id="front" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#91b59a"/>
+      <stop offset="0.38" stop-color="#61866c"/>
+      <stop offset="1" stop-color="#315b44"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="170%" height="180%">
+      <feGaussianBlur stdDeviation="1.7"/>
+    </filter>
+  </defs>
+  <path d="M5 3H44L52 10V60Q52 65 47 65H9L2 58V7Q2 3 5 3Z" fill="#061d17" opacity=".48" filter="url(#shadow)"/>
+  <path d="M43.5 1.5L50.5 8.5V59.7Q50.5 61.5 49 62.5L43.5 57Z" fill="url(#right)" stroke="#2c523f" stroke-width=".9"/>
+  <path d="M1 55.5L43.5 55.5L50 62Q49 64.3 46 64.3H9Q7.7 64.3 6.7 63.4L1 58.2Z" fill="url(#front)" stroke="#2c523f" stroke-width=".9"/>
+  <path d="M44.5 4L48.6 8.4V58.5" fill="none" stroke="#b3cab0" stroke-width=".85" opacity=".82"/>
+  <path d="M4 59L8.2 62.4H46.5" fill="none" stroke="#b3cbb2" stroke-width=".85" opacity=".75"/>
+  <rect x=".7" y=".7" width="43.3" height="57.3" rx="4.1" fill="url(#face)" stroke="#afa78e" stroke-width="1.25"/>
+  <rect x="2.5" y="2.5" width="39.7" height="53.5" rx="2.4" fill="none" stroke="#fffdf4" stroke-width="1.1"/>
+  <path d="M5 54.8H39.4" fill="none" stroke="#d0c6ad" stroke-width=".9"/>
+</svg>

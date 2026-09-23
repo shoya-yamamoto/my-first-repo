@@ -1,0 +1,32 @@
+{
+  "name": "my-first-repo",
+  "version": "1.0.0",
+  "description": "スマートフォン向け上海（麻雀ソリティア）ゲームです。",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "build": "node node_modules/esbuild-wasm/bin/esbuild src/main.jsx --bundle --minify --outfile=assets/app.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shoya-yamamoto/my-first-repo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/shoya-yamamoto/my-first-repo/issues"
+  },
+  "homepage": "https://github.com/shoya-yamamoto/my-first-repo#readme",
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "esbuild-wasm": "^0.28.2"
+  }
+}
