@@ -176,6 +176,14 @@ export default function ShanghaiGame() {
   }
   return (
     <main className="game">
+      <svg className="tile-filters" aria-hidden="true" focusable="false">
+        <defs>
+          <filter id="tile-ink-bold" colorInterpolationFilters="sRGB">
+            <feMorphology in="SourceGraphic" operator="erode" radius="0.55" result="bold" />
+            <feComposite in="bold" in2="SourceAlpha" operator="in" />
+          </filter>
+        </defs>
+      </svg>
       <header>
         <div>
           <p className="eyebrow">MAHJONG SOLITAIRE</p>

@@ -169,6 +169,13 @@ em {
   width: 40px;
   height: 52px;
   object-fit: contain;
+  filter: url(#tile-ink-bold);
+}
+.tile-filters {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
 }
 .tile.blocked {
   filter: brightness(0.72) saturate(0.65);
